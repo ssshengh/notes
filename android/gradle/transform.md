@@ -245,5 +245,3 @@ public interface TransformInvocation {
 
 如果我们的transform需要被缓存，则为true，它被TransformTask所用到
 
-# 一个简单例子🌰
-
