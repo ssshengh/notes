@@ -86,7 +86,7 @@ CONSTANT_Integer_info {
 
 1. access_flags: 即为权限或者说标识在 class 前面的任何东西，他是一个掩码
 
-![image-20230916094306905](/Users/bytedance/Library/Application Support/typora-user-images/image-20230916094306905.png)
+![image-20230916094306905](./assets/image-20230916094306905.png)
 
 2. this_class: 随后是对 CONSTANT_Class_info 类型常量的引用，表示类本身的名称。其值必须是 **constant_pool 表中的有效索引**。该索引处的 constant_pool 条目必须是一个 CONSTANT_Class_info 结构，表示由该类文件定义的类或接口。
 3. Super_class: 父类的名称，对于 java/lang/Object 可以为 0，这是 Java 中唯一没有父类的类。而如果super_class项的值不为零，则该索引处的constant_pool条目必须是CONSTANT_Class_info结构，表示该类文件所定义的类的直接父类。无论直接父类还是其任何父类都不得在其ClassFile结构的access_flags项的access_flags项中设置**ACC_FINAL**标志。
@@ -269,7 +269,7 @@ fn read_version(&mut self) -> ClassFileParserResult<()> {
 
 较为复杂的是读取常量池(其 idx 从 1 开始，但是语言中一般 0 开始)：
 
-<img src="/Users/bytedance/Library/Application Support/typora-user-images/image-20230919142520538.png" alt="image-20230919142520538" style="zoom:50%;" />
+<img src="./assets/image-20230919142520538.png" alt="image-20230919142520538" style="zoom:50%;" />
 
 ```rust
 fn read_constants(&mut self) -> ClassFileParserResult<()> {
@@ -368,7 +368,7 @@ fn read_interfaces(&mut self) -> ClassFileParserResult<()> {
 
 然后读取字段与方法：
 
-<img src="/Users/bytedance/Library/Application Support/typora-user-images/image-20230919144842840.png" alt="image-20230919144842840" style="zoom:50%;" /><img src="/Users/bytedance/Library/Application Support/typora-user-images/image-20230919144949636.png" alt="image-20230919144949636" style="zoom:50%;" />
+<img src="./assets/image-20230919144842840.png" alt="image-20230919144842840" style="zoom:50%;" /><img src="./assets/image-20230919144949636.png" alt="image-20230919144949636" style="zoom:50%;" />
 
 ```rust
 fn read_fields(&mut self) -> ClassFileParserResult<()> {
