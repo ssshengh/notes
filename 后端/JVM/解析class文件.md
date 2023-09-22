@@ -231,7 +231,244 @@ LineNumberTable_attribute 结构的各个 field 如下：
 
 ### 类属性
 
-类文件中的最后一个条目是类属性。其中一些最有趣的属性是 Signature，用于泛型类，以及 Bootstrap，用于实现 invokedynamic 指令 - 这是 Lambda 基础设施的一部分。
+类文件中的最后一个条目是类属性。其中一些最有趣的属性是 Signature，用于泛型类，以及 Bootstrap，用于实现 invokedynamic 指令 - 这是 Lambda 基础设施的一部分。 
+
+## 栈帧
+
+JVM 是一个基于栈的虚拟机，每个线程都有一个虚拟机栈用来存储栈帧（stack frame），栈帧是用于支持虚拟机进行方法调用和方法执行的数据结构，**栈帧随着方法调用而创建，随着方法结束而销毁**。每个栈帧可以简单的认为由三部分组成：
+
+<img src="./assets/(null)-20230921120056412.(null)" alt="img" style="zoom:50%;" />
+
+局部变量表的大小在编译期间就已经确定，一般用来缓存一些临时数据，JVM 会把局部变量区当成一个数组，里面会依次缓存 this 指针（非静态方法）、参数、局部变量。
+
+假设有一个类 SimpleClass :
+
+```java
+class SimpleClass {
+    private int c = 1;
+    
+    public int add() {
+        int a = 1;
+        int b = 2;
+        return a + b;
+    }
+    public int sub(int a, int b){
+        int result = a + b - c;
+        System.out.println(result);
+        return result;
+    }
+}
+```
+
+其字节码为:
+
+```java
+Last modified 2021-8-22; size 702 bytes
+    MD5 checksum 86c824b56f7eef2ec5cc5275232b93eb
+    Compiled from "SimpleClass.java"
+class wz.run.SimpleClass
+    minor version: 0
+    major version: 52
+    flags: ACC_SUPER
+Constant pool:
+    #1 = Methodref          #6.#26         // java/lang/Object."<init>":()V
+    #2 = Fieldref           #5.#27         // 5表示指向声明字段的类或者接口描述符CONSTANT_Class_info的索引项，即wz/run/SimpleClass；27表示指向字段描述符 CONSTANT_NameAndType的索引项，即c:I
+    #3 = Fieldref           #28.#29        // java/lang/System.out:Ljava/io/PrintStream;
+    #4 = Methodref          #30.#31        // java/io/PrintStream.println:(I)V
+    #5 = Class              #32            // 类和接口的全限定名，wz/run/SimpleClass
+    #6 = Class              #33            // java/lang/Object
+    #7 = Utf8               c
+    #8 = Utf8               I
+    #9 = Utf8               <init>
+    #10 = Utf8              ()V
+    #11 = Utf8              Code
+    #12 = Utf8              LineNumberTable
+    #13 = Utf8              LocalVariableTable
+    #14 = Utf8              this
+    #15 = Utf8              Lwz/run/SimpleClass;
+    #16 = Utf8              add            // 方法名称及其描述符
+    #17 = Utf8              ()I
+    #18 = Utf8              a              // 局部变量及其类型描述符 
+    #19 = Utf8              b              
+...
+    #27 = NameAndType #7:#8 // c:I
+    #28 = Class             #34            // java/lang/System   
+    #29 = NameAndType       #35:#36        // out:Ljava/io/PrintStream;   
+    #30 = Class             #37            // java/io/PrintStream   
+    #31 = NameAndType       #38:#39        // println:(I)V   
+    #32 = Utf8              wz/run/SimpleClass   
+    #33 = Utf8              java/lang/Object
+...
+
+{
+    private int c;
+        descriptor: I
+        flags: ACC_PRIVATE
+
+    wz.run.SimpleClass();
+        descriptor: ()V
+        flags:
+        Code:
+            stack=2, locals=1, args_size=1
+                0: aload_0
+                1: invokespecial #1                  // Method java/lang/Object."<init>":()V
+                4: aload_0
+                5: iconst_1
+                6: putfield      #2                  // Field c:I
+                9: return
+        LineNumberTable:
+            line 6: 0
+            line 8: 4
+        LocalVariableTable:
+            Start  Length  Slot  Name   Signature
+                0      10     0  this   Lwz/run/SimpleClass;
+
+    public int add();
+        descriptor: ()I
+        flags: ACC_PUBLIC
+        Code:
+            stack=2, locals=3, args_size=1
+                0: iconst_1
+                1: istore_1
+                2: iconst_2
+                3: istore_2
+                4: iload_1
+                5: iload_2
+                6: iadd
+                7: ireturn
+        LineNumberTable:
+            line 11: 0
+            line 12: 2
+            line 13: 4
+        LocalVariableTable:
+            Start  Length  Slot  Name   Signature
+                0       8     0  this   Lwz/run/SimpleClass;
+                2       6     1     a   I
+                4       4     2     b   I
+```
+
+我们以 add 方法部分来看：
+
+```Java
+public int add();
+    descriptor: ()I
+    flags: ACC_PUBLIC
+    Code:
+        stack=2, locals=3, args_size=1
+          ...
+    LocalVariableTable:
+        Start  Length  Slot  Name   Signature
+            0       8     0  this   Lwz/run/SimpleClass;
+            2       6     1     a   I
+            4       4     2     b   I
+```
+
+add 方法没有参数，但是 args_size = 1，这是因为非静态方法被调用时，第 0 个局部变量是当前的 this。 locals = 3 代表当前局部变量表的长度是 3，LocalVariableTable 中就是变量表中的内容，它表示局部表量表中有 3 个槽（slot）。如果 add 方法是静态方法，局部变量表将不包含 this，args_size = 0，locals = 2。这一点很重要。
+
+### 操作数栈（Operand Stack）
+
+操作数栈是一个后进先出（LIFO）栈，在方法调用时，操作数栈用于准备调用方法的参数和接收方法返回的结果。 JVM 提供了很多字节码指令用于操作数栈和本地变量表通信，比如：
+
+- load：从局部变量表或者对象实例的字段中复制常量或者变量到操作数栈
+- store：从操作数栈取走数据、操作数据和把操作结果重新入栈
+
+再看上述例子 add 方法的字节码和相应过程图：
+
+```Java
+public int add();
+    descriptor: ()I
+    flags: ACC_PUBLIC
+    Code:
+        stack=2, locals=3, args_size=1
+            0: iconst_1 // push 常量 1 到操作数栈顶
+            1: istore_1 // 将栈顶元素出栈并存到局部变量表 slot1 处
+            2: iconst_2 // push 常量 2 到操作数栈顶
+            3: istore_2 // 将栈顶元素出栈并存到局部变量表 slot2 处
+            4: iload_1 // 加载局部变量表 slot1 处元素到栈顶
+            5: iload_2 // 加载局部变量表 slot2 处元素到栈顶
+            6: iadd // 将操作数栈栈顶两个元素出栈，相加后将结果入栈
+            7: ireturn // 返回栈顶元素，方法结束
+```
+
+局部变量表的长度为 3，操作数栈的的深度为 2：
+
+<img src="./assets/(null)-20230921120056459.(null)" alt="img" style="zoom:50%;" />
+
+局部变量表的容量单位是变量槽（Variable Slot）。每个变量槽最大的存储长度是 32 位，因此上面提到对于 byte、char、boolean、short、int、float、reference 是占用 1 个变量槽，对于 double、long 类型占用 2 个变量槽。
+
+### 描述符（descriptor）
+
+如 add 的字节码中 descriptor: ()I。描述符的作用是描述字段的数据类型、方法的参数列表（包括数量、类型以及顺序）和返回值。一般对象类型末尾都会加一个“;”来表示全限定名的结束。在字节码中，各个地方的描述符都遵守同一套逻辑，这里有一张表进行了详细的描述：
+
+<img src="./assets/image-20230921141708529.png" alt="image-20230921141708529" style="zoom:50%;" />
+
+举例：
+
+```Java
+java代码                               ->      字节码描述符
+void init()                           ->      ()V
+void test(Object o, long l)           ->      (Ljava/lang/object;J)V
+String[] getArray(String s)           ->      (Ljava/lang/String;)[Ljava/lang/String;
+```
+
+### 常用操作码指令
+
+字节码指令由一个标识该指令的操作码（[opcode](https://docs.oracle.com/javase/specs/jvms/se7/html/jvms-6.html)）和紧跟着的固定数目的参数/操作数（operand）组成。
+
+opcode 占用一个字节，也就是说最多支持 256 个指令。有些指令带有前缀 x，指令的前缀表示操作对象的类型，**a（针对对象）**、i（针对 int）、l（针对 long）、f（针对 float）、d（针对 double）、b（针对 byte）、c（针对 char）、s（针对 short）。 
+
+由于 Java 虚拟机是基于栈而不是寄存器的结构，所以大多数指令都只有一个操作码。比如 `aload_0`（将局部变量表中下标为 0 的数据压入操作数栈中）就只有操作码没有操作数，而 `invokespecial #1`（调用成员方法，并传递常量池中下标为 1 的常量）就是由操作码和操作数组成的。
+
+1. **局部变量表和操作数栈相互操作**
+
+- xload_n：表示将第 n 个局部变量压入操作数栈中（不带参数）；xload n 是通过指定参数的形式，与前者表示的含义一样。但前者相当于只有操作码，占用 1 个字节；后者相当于由操作码和操作数组成，操作码占 1 个字节，操作数可能占 2 个字节。两种选择是增加指令数量和字节码体积的取舍，xload_n 的 n 的范围只是[0，3]。
+- xstore_n 和 xstore 与 load 同理，只是表示将操作数栈栈顶的数据存储到局部变量表索引为 n 的位置中
+
+1. **操作数栈管理指令**
+
+- xconst_n：将常量池中的常量压入操作数栈中。const 指令范围是[-1，5]，push 与 ldc 操作范围更大的常数
+- pop：栈顶出栈
+- dup(n)：复制栈顶并入栈。比如 dup2 指令，输入 v2 v1，输出 v2 v1 v2 v1
+- swap：交换栈顶的两个元素
+
+1. **对象的创建和（全局变量）访问**
+
+- newarray：创建基本数据类型的数组
+- 访问静态变量：getstatic、putstatic
+- 访问成员变量：getfield、putfield。比如 getfield #2 ，会获取常量池中的 #2 字段压入栈顶。
+
+1. **方法调用和返回**
+
+方法调用有如下 5 种
+
+- invokestatic：用于调用静态方法
+- invokespecial：用于调用私有实例方法、构造器方法以及使用 super 关键字调用父类的实例方法等
+- invokevirtual：用于调用非私有实例的成员方法
+- invokeinterface：用于调用接口方法
+- invokedynamic：用于运行时动态解析出调用点限定符所引用的方法，并执行，比如 lambda。
+
+方法返回指令根据方法的返回值类型进行区分
+
+- (x)return：方法返回 x 类型变量
+
+1. **算术指令**
+
+算术指令用于对两个操作数栈上的值进行某种特定运算，并把结果重新压入操作数栈。如 xadd、xsub、xmul、xdiv
+
+再看上述 System.out.println(result) 对应的字节码
+
+```Java
+3: aload_0
+9: getstatic     #3                  // Field java/lang/System.out:Ljava/io/PrintStream;
+12: iload_3   
+13: invokevirtual #4                 // Method java/io/PrintStream.println:(I)V
+```
+
+通过 `getstatic#3` 压入了一个 `PrintStream` 对象，通过 `aload_0` 和 `iload_3` 将 this 和参数压入了操作数栈，调用 `invokevirtual #4`获取常量池中的 #4 字段，将实例 this 和参数出栈并调用 println 方法。
+
+综上，局部变量表、操作数栈和常量池的关系可汇总如下：
+
+![img](./assets/(null)-20230921120056509.(null))
 
 # 解析 .class 文件
 
