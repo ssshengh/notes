@@ -1,0 +1,10 @@
+[
+  {
+    "clazz": "com.ss.example.Dog",
+    "id": "dog"
+  },
+  {
+    "clazz": "com.ss.example.Cat",
+    "id": "cat"
+  }
+]
