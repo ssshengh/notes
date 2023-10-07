@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd">
+
+    <bean class="com.ss.example.Dog" id="dog"/>
+
+    <bean class="com.ss.example.User" id="user" >
+        <constructor-arg name="name" value="张三"/>
+        <constructor-arg name="age" value="18"/>
+        <constructor-arg name="address" value="street1"/>
+        <constructor-arg name="cats">
+            <list>
+                <bean class="com.ss.example.Cat" name="cat1"/>
+                <bean class="com.ss.example.Cat" name="cat2"/>
+            </list>
+        </constructor-arg>
+
+        <property name="name" value="张三"/>
+        <property name="age" value="18"/>
+        <property name="address" value="street1"/>
+        <!--引用一个外部对象-->
+        <property name="dog" ref="dog"/>
+        <!--在内部来完成对象的定义-->
+        <property name="cats">
+            <list>
+                <bean class="com.ss.example.Cat">
+                    <property name="name" value="小白"/>
+                    <property name="age" value="2"/>
+                </bean>
+                <bean class="com.ss.example.Cat">
+                    <property name="name" value="小黑"/>
+                    <property name="age" value="3"/>
+                </bean>
+            </list>
+        </property>
+        <!--array-->
+        <property name="favorites">
+            <array>
+                <value>足球</value>
+                <value>篮球</value>
+                <value>rap</value>
+            </array>
+        </property>
+        <!--map-->
+        <property name="infos">
+            <map>
+                <entry key="身份证" value="123456"/>
+                <entry key="职位" value="工程师"/>
+            </map>
+        </property>
+    </bean>
+
+</beans>

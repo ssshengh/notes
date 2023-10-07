@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd">
+
+    <beans default-autowire="byName">
+        <bean class="com.ss.example.Cat" name="cat" scope="prototype">
+            <property name="name" value="Tom"/>
+            <property name="age" value="3"/>
+        </bean>
+
+        <bean class="com.ss.example.Cat" name="cat2">
+            <property name="name" value="Jerry"/>
+            <property name="age" value="2"/>
+        </bean>
+
+        <bean class="com.ss.example.User" name="user" autowire="default">
+            <property name="name" value="Jack"/>
+            <property name="age" value="18"/>
+        </bean>
+
+    </beans>
+
+</beans>

@@ -26,7 +26,7 @@ class A {
 
 # 写一个简单的 IOC 容器
 
-对于 Spring 来说，一个 IOC 容器无非就是收容了所有的类，我们可以使用如下的一个小程序来模拟：
+对于 Spring 来说，一个 IOC 容器无非就是收容了所有的类，我们可以使用如下的一个小程序来模拟(代码在 samples/simple_ioc 中)：
 
 <img src="./assets/image-20231002124608961.png" alt="image-20231002124608961" style="zoom:50%;" />
 
