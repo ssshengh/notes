@@ -13,6 +13,17 @@ log = "0.4.20"
 env_logger = "0.10.1"
 ```
 
+GLFW 比较好用，但是 GLAD 比较麻烦，我们首先需要去[官方页面](https://github.com/Dav1dde/glad/blob/glad2/example/rust/gl-glfw/README.md)中按照步骤进行编译，得到产物：
+
+![image-20231224193031071](./assets/image-20231224193031071.png)
+
+然后引入项目：
+
+```yaml
+[dependencies]
+glad-gl = { path = "./glad-gl" }
+```
+
 # 创建一个 Window
 
 创建图形应用程序的第一步是创建一个窗口。Let's do it!
@@ -133,6 +144,91 @@ while !glfw_local.window.should_close() {
 > * 渲染命令则是绘制到后缓冲区。
 >
 > 一旦所有渲染命令完成，我们就将后缓冲区与前缓冲区交换，这样图像就可以在不再渲染的情况下显示，消除了所有上述的伪影。
+
+## 回收资源
+
+一旦我们退出渲染循环，我们希望正确地清理/删除所有分配的 GLFW 资源。我们可以通过在主函数末尾调用的 glfwTerminate 函数来完成此操作：
+
+```rust
+glfwTerminate();
+return 0;
+```
+
+但是在 Rust 中，Glfw-rs 已经在 drop 中帮我们完成了这件事：
+
+```rust
+impl Drop for Window {
+    /// Closes the window and performs the necessary cleanups. This will block
+    /// until all associated `RenderContext`s were also dropped, and emit a
+    /// `debug!` message to that effect.
+    ///
+    /// Wrapper for `glfwDestroyWindow`.
+    fn drop(&mut self) {
+        drop(self.drop_sender.take());
+
+        // Check if all senders from the child `RenderContext`s have hung up.
+        #[cfg(feature = "log")]
+        if self.drop_receiver.try_recv() != Err(std::sync::mpsc::TryRecvError::Disconnected) {
+            debug!("Attempted to drop a Window before the `RenderContext` was dropped.");
+            debug!("Blocking until the `RenderContext` was dropped.");
+            let _ = self.drop_receiver.recv();
+        }
+
+        if !self.ptr.is_null() {
+            unsafe {
+                let _: Box<WindowCallbacks> =
+                    mem::transmute(ffi::glfwGetWindowUserPointer(self.ptr));
+            }
+        }
+
+        if !self.is_shared {
+            unsafe {
+                ffi::glfwDestroyWindow(self.ptr);
+            }
+        }
+    }
+}
+```
+
+## 接收输入及渲染
+
+我们需要在渲染循环中不断的接受输入(键盘或者鼠标)，在 OpenGL 中我们可以通过`glfwGetKey`函数来处理键盘的输入，例如下面的方法：
+
+```rust
+fn process_input(window: &mut Window) {
+    if window.get_key(Key::F10) == Action::Press {
+        // F10 关闭窗口
+        window.set_should_close(true);
+    }
+}
+
+// C 是这样
+void processInput(GLFWwindow *window)
+{
+    if(glfwGetKey(window, GLFW_KEY_F10) == GLFW_PRESS)
+        glfwSetWindowShouldClose(window, true);
+}
+```
+
+只需要在渲染循环中调就行:
+
+```rust
+    while !glfw_local.window.should_close() {
+        process_input(&mut glfw_local.window);
+
+        // 这里写渲染命令即可
+        
+
+        // 持续交换 front 与 back buffer
+        glfw_local.window.swap_buffers();
+        // Poll for and process events
+        glfw_local.window.glfw.poll_events();
+    }
+```
+
+
+
+
 
 # 安卓刷新原理
 
