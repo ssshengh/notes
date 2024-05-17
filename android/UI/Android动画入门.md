@@ -709,6 +709,8 @@ button?.setOnClickListener {
 }
 ```
 
+> 参考：https://juejin.cn/post/6980139721594765319
+
 #### FlingAnimation，投掷动画
 
 例子，也是 X 轴方向移动：
